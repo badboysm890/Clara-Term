@@ -40,5 +40,5 @@ If you like what you see, give us a star! Stars are like virtual high-fives. ðŸ™
 [Your choice, but 'MIT License' is cool if you like to keep it chill]
 
 ## Credits
-GUVI Geek Network Pvt. Ltd. (https://www.guvi.in/)
+GUVI (https://www.guvi.in/)
 --They Bought Me Coffee â˜•--
