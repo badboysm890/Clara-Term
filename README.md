@@ -37,4 +37,3 @@ If you like what you see, give us a star! Stars are like virtual high-fives. ðŸ™
 ## Credits
 GUVI Geek Network Pvt. Ltd. (https://www.guvi.in/)
 --They Bought Me Coffee â˜•--
-```# Clara-Term
