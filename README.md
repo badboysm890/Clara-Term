@@ -21,6 +21,9 @@ Because who has time for complicated installations?
 
 ## Usage
 ```bash
+nano .env
+add this line --> OPENAI_ACCESS_KEY=your key
+
 clara -i "[Your Query]"
 ```
 Ask and you shall receive. It's like having a genie, but for code. 🧞
