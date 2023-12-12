@@ -54,7 +54,7 @@ class OtherFilesGenerator:
         
         logging.info("Checking if other files are required... for running the code")
         data =  self.llm.predict(code+"' this is the code i wrote but its not running becoz it needs some other files, what other files are required to run this code? please provide the Code, FileName and Extension of the file. Please provide the code Damm it")
-        print("data", data)
+        # print("data", data)
         return data
     
 class DynamicAgent:
@@ -80,7 +80,7 @@ class DynamicAgent:
         return other_files_generator.generate_other_files(code)
     
     def create_files_from_string(self,input_string, folder_path):
-        print("input_string --------------------------", input_string)
+        # print("input_string --------------------------", input_string)
         # Regular expression to match code blocks and their extensions
         code_blocks = re.findall(r'```([a-zA-Z]+)\n(.*?)```', input_string, re.DOTALL)
         file_name_pattern = r'<title>(.*?)<\/title>'
