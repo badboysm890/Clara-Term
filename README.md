@@ -19,6 +19,8 @@ pip install --editable .
 ```
 Because who has time for complicated installations?
 
+![How to install](How.gif)
+
 ## Usage
 ```bash
 nano .env
