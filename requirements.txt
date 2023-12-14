@@ -54,3 +54,4 @@ tzdata==2023.3
 urllib3==2.1.0
 Werkzeug==3.0.1
 yarl==1.9.4
+gpt4all

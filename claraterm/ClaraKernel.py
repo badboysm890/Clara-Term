@@ -10,12 +10,16 @@ from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
-import shutil
-# redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+from gpt4all import GPT4All
+import g4f
+load_dotenv()
+
+openai_api_key = os.getenv('OPENAI_API_KEY')
+verbose_logging = os.getenv('VERBOSE', 'False') == 'True'
 
 logging.basicConfig(level=logging.DEBUG, filename='run.log', filemode='w')
 load_dotenv()
-openai_api_key = os.getenv('OPENAI_ACCESS_KEY')
+openai_api_key = os.getenv('OPENAI_API_KEY')
 
 script_filename = ""
 
@@ -47,21 +51,46 @@ class FolderNameGenerator:
             return f"{query.replace(' ', '_')}{timestamp}"
 
 class OtherFilesGenerator:
-    def __init__(self):
-        self.llm = ChatOpenAI(temperature=0.9, openai_api_key=openai_api_key)
-       
-    def generate_other_files(self, code):
+    def __init__(self, api_key, is_offline=False):
+        self.is_offline = is_offline
+        if not is_offline:
+            self.llm = ChatOpenAI(openai_api_key=api_key)
+        else:
+            self.model = GPT4All("starcoder-q4_0.gguf",model_path="/Users/badfy17g/.cache/gpt4all")
+        logging.info("DynamicAgent initialized.")
         
+    def predict(self, prompt):
+        if self.is_offline:
+            response = self.model.generate(prompt, max_tokens=4000)
+            return response
+        else:
+            return self.llm.predict(prompt)
+        
+    def generate_other_files(self, code):
         logging.info("Checking if other files are required... for running the code")
-        data =  self.llm.predict(code+"' this is the code i wrote but its not running becoz it needs some other files, what other files are required to run this code? please provide the Code, FileName and Extension of the file. Please provide the code Damm it")
+        data =  self.predict(code+"' this is the code i wrote but its not running becoz it needs some other files, what other files are required to run this code? please provide the Code, FileName and Extension of the file. Please provide the code Damm it")
         # print("data", data)
         return data
     
 class DynamicAgent:
     
-    def __init__(self, api_key):
-        self.llm = ChatOpenAI(openai_api_key=api_key)
-        logging.info("DynamicAgent initialized with provided API key.")
+    def __init__(self, api_key, is_offline=False):
+        self.is_offline = is_offline
+        if not is_offline:
+            self.llm = ChatOpenAI(openai_api_key=api_key)
+        logging.info("DynamicAgent initialized.")
+
+    def predict(self, prompt):
+        if self.is_offline:
+            # Using g4f for predictions when offline
+            response = g4f.ChatCompletion.create(
+                model=g4f.models.gpt_4,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            # Directly return the response string
+            return response
+        else:
+            return self.llm.predict(prompt)
 
 
     def generate_unique_foldername(self, query):
@@ -76,12 +105,10 @@ class DynamicAgent:
 
     def generate_other_files(self, code):
         # use the OtherFilesGenerator  to generate other files
-        other_files_generator = OtherFilesGenerator()
+        other_files_generator = OtherFilesGenerator(None, is_offline=self.is_offline)
         return other_files_generator.generate_other_files(code)
     
     def create_files_from_string(self,input_string, folder_path):
-        # print("input_string --------------------------", input_string)
-        # Regular expression to match code blocks and their extensions
         code_blocks = re.findall(r'```([a-zA-Z]+)\n(.*?)```', input_string, re.DOTALL)
         file_name_pattern = r'<title>(.*?)<\/title>'
         try:
@@ -107,7 +134,9 @@ class DynamicAgent:
     
     def determine_task(self, query):
         logging.info("Determining task from the provided query...")
-        return self.llm.predict(f"""So tell me How can I achieve this in Python {query} , Provide me only one complete code nothing else with if you need output to you?""")
+        # Replace self.llm.predict with self.predict
+        return self.predict(f"So tell me How can I achieve this in Python {query}, Provide me only one complete code nothing else with if you need output to you?")
+
 
     def extract_executable_code(self, full_code):
         logging.info("Extracting code segment...")
@@ -134,7 +163,7 @@ class DynamicAgent:
 
     def detect_dependencies(self, code):
         logging.info("Detecting dependencies required for the generated code...")
-        detected_imports_response = self.llm.predict(f"What are the pip installables for this code, provide as copy-paste snippet? {code}")
+        detected_imports_response = self.predict(f"What are the pip installables for this code, provide as copy-paste snippet? {code}")
         dependencies = re.findall(r'pip install ([\w\-]+)', detected_imports_response)
         logging.debug(f"Detected dependencies: {dependencies}")
         return dependencies
@@ -156,22 +185,30 @@ class DynamicAgent:
         logging.debug(f"Executable code: {executable_code}")
         
         if not executable_code:
-            return "Error: Code extraction failed.", None
-
+            return "Error: Code extraction failed.", None, None
+    
+        # Display the code to the user for review and ask for confirmation
+        print("Generated code to execute:\n")
+        print(executable_code)
+        execute_confirmation = input("Do you want to execute this code? (y/N): ")
+        if execute_confirmation.lower() != 'y':
+            return "Execution aborted by the user.", None, None
+    
         script_filename = self.generate_unique_filename()
-
+    
         with open(script_filename, 'w') as f:
             f.write(executable_code)
-
-        # create other files
+    
+        # Create other files
         self.create_files_from_string(other_files, ".")
-        
+    
         try:
             output = subprocess.check_output(['python', script_filename])
             return output.decode('utf-8').strip(), None, script_filename
         except subprocess.CalledProcessError as e:
             error_message = e.output.decode('utf-8').strip()
             return f"Error during execution: {error_message}", executable_code, script_filename
+    
 
     def fix_and_execute_code(self, error, code):
         for _ in range(5):

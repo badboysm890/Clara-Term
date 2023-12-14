@@ -24,7 +24,7 @@ Because who has time for complicated installations?
 ## Usage
 ```bash
 nano .env
-add this line --> OPENAI_ACCESS_KEY=your key
+add this line --> OPENAI_API_KEY=your key
 
 clara -i "[Your Query]"
 ```
