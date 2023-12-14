@@ -9,7 +9,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='claraterm',
-    version='0.2.7',
+    version='0.3.1',
     author='BadBoy17G',
     author_email='praveensm890@gmail.com',
     description='let AI do the heavy lifting in terminal, CoPilot for your Terminal',
