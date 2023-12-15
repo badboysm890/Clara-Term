@@ -1,48 +1,62 @@
+<h1 align="center">Clara-Term 🚀</h1>
 
-# Project Name: Clara-Term 🚀
-An advanced terminal-based automation tool powered by AI – because who needs humans anymore? 🤖
+<p align="center">
+    <a href="https://github.com/badboysm890/clara-term">
+        <img alt="GitHub stars" src="https://img.shields.io/github/stars/badboysm890/clara-term?style=social"/></a>
+    <a href="https://github.com/badboysm890/clara-term/issues">
+        <img alt="GitHub issues" src="https://img.shields.io/github/issues/badboysm890/clara-term"/></a>
+    <a href="LICENSE">
+        <img alt="License" src="https://img.shields.io/github/license/badboysm890/clara-term"/></a>
+    <br>
+    <b>Streamlining Terminal Automation with AI-Driven Technology</b><br>
+    Harness the power of GPT-3.5 for intuitive and efficient scripting.<br>
+    <br>
+</p>
 
-## Description
-Ever wished your computer could just 'get' you? Well, Clara-Term is basically a mind reader in the form of code. Powered by GPT-3.5 (with a VIP pass for GUVI-GPT and Llama2 coming soon), it's changing the game in script automation. Perfect for those who love Python 🐍 (and soon, Go and JavaScript aficionados). 
+## Introduction
+
+Clara-Term is a groundbreaking terminal automation tool that integrates cutting-edge AI technology, predominantly GPT-3.5. Designed for developers seeking to streamline their scripting workflows, Clara-Term offers a powerful, efficient, and user-friendly experience. 
 
 ### Key Features
-- **AI-Driven Script Wizardry:** Creates scripts so you don't have to. It's like magic, but real. ✨
-- **Language Party:** Starts with Python, but Go and JavaScript are on the invite list. 🎉
-- **Self-Healing Wizard:** It fixes its own boo-boos in scripts. Self-care at its finest. 🩹
-- **Dependency Juggler:** Manages dependencies like a circus pro. 🎪
-- **The Future is Bright:** Brace yourselves, GUVI-GPT and Llama2 are coming. 🌟
+
+- **AI Script Automation**: Utilizes GPT-3.5 for intelligent and efficient script creation.
+- **Multilingual**: Supports Python with upcoming extensions for Go and JavaScript.
+- **Self-Healing Scripts**: Features automated error correction for enhanced reliability.
+- **Dependency Management**: Efficiently manages project dependencies.
+- **Future Integration**: GUVI-GPT and Llama2 compatibility in the pipeline.
 
 ## Installation
+
+Simple setup to get you started with Clara-Term:
+
 ```bash
 python -m venv env
 source env/bin/activate
 pip install --editable .
 ```
-Because who has time for complicated installations?
-
-![How to install](How.gif)
 
 ## Usage
-```bash
-nano .env
-add this line --> OPENAI_API_KEY=your key
 
+Quickly configure and start using Clara-Term:
+
+```bash
+echo "OPENAI_API_KEY=your_key" > .env
 clara -i "[Your Query]"
 ```
-Ask and you shall receive. It's like having a genie, but for code. 🧞
 
 ## Contributing
-Got ideas? Improvements? Jokes? All are welcome here! Let's make coding fun again (was it ever not fun?) 😜
 
-## Star Us! ⭐
-If you like what you see, give us a star! Stars are like virtual high-fives. 🙌
+Join us in refining Clara-Term. Suggestions, improvements, and contributions are welcomed to enhance its functionality.
+
+## Support
+
+Like what you see? Give Clara-Term a star on GitHub to show your support!
 
 ## License
-[Your choice, but 'MIT License' is cool if you like to keep it chill]
 
-## Credits
-G4F (https://github.com/xtekky/gpt4free)
-Offline Support
+This project is licensed under the MIT License.
 
-GUVI Geek Network Pvt. Ltd. (https://www.guvi.in/)
+## Acknowledgments
 
+- G4F (https://github.com/xtekky/gpt4free) for offline support.
+- GUVI Geek Network Pvt. Ltd. (https://www.guvi.in/).
