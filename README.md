@@ -15,7 +15,7 @@
 
 ## Introduction
 
-Clara-Term is a groundbreaking terminal automation tool that integrates cutting-edge AI technology, predominantly GPT. Designed for developers seeking to streamline their scripting workflows, Clara-Term offers a powerful, efficient, and user-friendly experience. 
+Clara-Term is a terminal automation tool that integrates cutting-edge AI technology, predominantly GPT. Designed for developers seeking to streamline their scripting workflows, Clara-Term offers a powerful, efficient, and user-friendly experience. 
 
 ### Key Features
 
