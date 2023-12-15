@@ -1,4 +1,4 @@
-<h1 align="center">Clara-Term 🚀</h1>
+<h1 align="center">ClaraTerm 🚀</h1>
 
 <p align="center">
     <a href="https://github.com/badboysm890/clara-term">
