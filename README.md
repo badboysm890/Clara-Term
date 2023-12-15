@@ -19,7 +19,7 @@ Clara-Term is a groundbreaking terminal automation tool that integrates cutting-
 
 ### Key Features
 
-- **AI Script Automation**: Utilizes GPT-3.5 for intelligent and efficient script creation.
+- **AI Script Automation**: Utilizes GPT for intelligent and efficient script creation.
 - **Multilingual**: Supports Python with upcoming extensions for Go and JavaScript.
 - **Self-Healing Scripts**: Features automated error correction for enhanced reliability.
 - **Dependency Management**: Efficiently manages project dependencies.
