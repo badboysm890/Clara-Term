@@ -9,7 +9,7 @@
         <img alt="License" src="https://img.shields.io/github/license/badboysm890/clara-term"/></a>
     <br>
     <b>Streamlining Terminal Automation with AI-Driven Technology</b><br>
-    Harness the power of GPT-3.5 for intuitive and efficient scripting.<br>
+    Harness the power of GPT for intuitive and efficient scripting.<br>
     <br>
 </p>
 
