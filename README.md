@@ -40,7 +40,6 @@ pip install --editable .
 Quickly configure and start using Clara-Term:
 
 ```bash
-echo "OPENAI_API_KEY=your_key" > .env
 clara -i "[Your Query]"
 ```
 
