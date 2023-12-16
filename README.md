@@ -58,5 +58,5 @@ This project is licensed under the MIT License.
 
 ## Acknowledgments
 
-- G4F (https://github.com/xtekky/gpt4free) for their role in offline AI support.
+- G4F (https://github.com/xtekky/gpt4free) for their role in Free AI support.
 - GUVI Geek Network Pvt. Ltd. (https://www.guvi.in/) for their vital collaboration.
