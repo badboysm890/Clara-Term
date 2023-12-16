@@ -19,7 +19,7 @@ def get_openai_access_key():
     key = os.getenv('OPENAI_API_KEY')
     offline = os.getenv('OFFLINE_MODE')
     if key is None and offline is None:
-        response = input("OpenAI API key not found. Do you want to switch to offline mode? It may require downloading a ~2GB model. (Y/N): ")
+        response = input("OpenAI API key not found. Do you want to switch to free models ?  Or Choose No to use OpenAI (Recommended)? (Y/N): ")
         if response.lower() in ['y', 'yes']:
             set_offline_mode()
             return None

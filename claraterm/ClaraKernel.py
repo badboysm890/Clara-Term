@@ -10,8 +10,11 @@ from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
-from gpt4all import GPT4All
 import g4f
+
+g4f.debug.logging = True  # Enable debug logging
+g4f.debug.check_version = False  # Disable automatic version checking
+
 load_dotenv()
 
 openai_api_key = os.getenv('OPENAI_API_KEY')
@@ -55,20 +58,24 @@ class OtherFilesGenerator:
         self.is_offline = is_offline
         if not is_offline:
             self.llm = ChatOpenAI(openai_api_key=api_key)
-        else:
-            self.model = GPT4All("starcoder-q4_0.gguf",model_path="/Users/badfy17g/.cache/gpt4all")
-        logging.info("DynamicAgent initialized.")
+
         
     def predict(self, prompt):
         if self.is_offline:
-            response = self.model.generate(prompt, max_tokens=4000)
+            # Using g4f for predictions when offline
+            response = g4f.ChatCompletion.create(
+                model=g4f.models.gpt_4,
+                messages=[{"role": "user", "content": prompt}],
+                provider=g4f.Provider.Liaobots,
+            )
+            # Directly return the response string
             return response
         else:
             return self.llm.predict(prompt)
         
     def generate_other_files(self, code):
         logging.info("Checking if other files are required... for running the code")
-        data =  self.predict(code+"' this is the code i wrote but its not running becoz it needs some other files, what other files are required to run this code? please provide the Code, FileName and Extension of the file. Please provide the code Damm it")
+        data =  self.predict(code+"' this is the code i wrote but its not running becoz it needs some other files, what other files are required to run this code? please provide the Code, FileName and Extension of the file. Provide the code")
         # print("data", data)
         return data
     
@@ -86,6 +93,7 @@ class DynamicAgent:
             response = g4f.ChatCompletion.create(
                 model=g4f.models.gpt_4,
                 messages=[{"role": "user", "content": prompt}],
+                provider=g4f.Provider.Liaobots,
             )
             # Directly return the response string
             return response
@@ -213,7 +221,7 @@ class DynamicAgent:
     def fix_and_execute_code(self, error, code):
         for _ in range(5):
             logging.info("Attempting to fix the code...")
-            fix_instruction = self.llm.predict(f"fix this error: '{error}' in the following code: ```{code}``` and Provide the correct complete code")
+            fix_instruction = self.predict(f"fix this error: '{error}' in the following code: ```{code}``` and Provide the correct complete code")
             dependencies = self.detect_dependencies(fix_instruction)
             self.ensure_dependencies_installed(dependencies)
             fixed_code = self.extract_executable_code(fix_instruction)
@@ -221,9 +229,9 @@ class DynamicAgent:
             if not fixed_code:
                 continue
 
-            folder_name = self.generate_unique_foldername()
-            os.makedirs(folder_name, exist_ok=True)  # ensure the folder exists
-            script_filename = self.generate_unique_filename(folder_name)
+            # folder_name = self.generate_unique_foldername()
+            # os.makedirs(folder_name, exist_ok=True)  # ensure the folder exists
+            script_filename = self.generate_unique_filename("temp")
 
             with open(script_filename, 'w') as f:
                 f.write(fixed_code)
@@ -233,7 +241,7 @@ class DynamicAgent:
                 return output.decode('utf-8').strip()
             except subprocess.CalledProcessError as e:
                 error = e.output.decode('utf-8').strip()
-                with open(os.path.join(folder_name, "final_attempted_code.py"), 'w') as f:
+                with open(os.path.join("temp", "final_attempted_code.py"), 'w') as f:
                     f.write(fixed_code)
             return f"Error during re-execution after fixing: {error}"
         
