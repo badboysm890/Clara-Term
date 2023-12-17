@@ -44,6 +44,8 @@ Deploy ClaraTerm for advanced terminal operations and be part of the transition 
 clara -i "[Your Query]"
 ```
 
+Video Demo Link:https://youtu.be/kQKh39SnMiY
+
 ## Contributing
 
 We invite you to contribute to ClaraTerm, playing a critical role in shaping the next generation of AI-driven operating systems.
