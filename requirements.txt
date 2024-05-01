@@ -50,3 +50,4 @@ tzdata==2023.3
 urllib3==2.1.0
 yarl==1.9.4
 g4f
+ollama==0.1.9
