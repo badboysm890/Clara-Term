@@ -92,6 +92,8 @@ class DynamicAgent:
     
     def __init__(self, api_key, is_offline=False):
         self.is_offline = is_offline
+        self.execution_count = 0
+        self.query = ""
         if not is_offline:
             self.llm = ChatOpenAI(openai_api_key=api_key)
         logging.info("DynamicAgent initialized.")
@@ -159,6 +161,7 @@ class DynamicAgent:
         logging.debug(f"Query: {query}")
         os_name = platform.system()
         os_version = platform.release()
+        
     
         # Get system username
         username = getpass.getuser()
@@ -197,7 +200,7 @@ class DynamicAgent:
                 logging.debug(f"Extracted code: {extracted_code.group(1).strip()}")
                 return extracted_code.group(1).strip()
         
-        return "print('Code Extraction failed follow this format ```<code>```')"
+        # return "print('Code Extraction failed follow this format ```<code>```')"
 
     def validate_extracted_code(self, code):
         logging.info("Validating the extracted code...")
@@ -208,18 +211,17 @@ class DynamicAgent:
         logging.info("Fetching and validating solution...")
         full_solution = self.determine_task(query)
         logging.debug(f"Full solution: {full_solution}")
-        if self.validate_extracted_code(full_solution):
-            return full_solution
-        else:
-            return self.extract_executable_code(full_solution)
+        # if self.validate_extracted_code(full_solution):
+        #     return full_solution
+        # else:
+        return self.extract_executable_code(full_solution)
 
     def detect_dependencies(self, code):
         logging.info("Detecting dependencies required for the generated code...")
-        logging.debug(f"---------Code to detect dependencies: {code}")
+        logging.debug(f"Code to detect dependencies: {code}")
         detected_imports_response = self.predict(f"Check the import statements in the given code and give all necessary pip installables if no package needed or if its inbuild then skip else provide as copy-paste snippet? {code}")
         dependencies = re.findall(r'pip install ([\w\-]+)', detected_imports_response)
         logging.debug(f"Detected dependencies: {dependencies}")
-        print(dependencies)
         return dependencies
 
     def ensure_dependencies_installed(self, dependencies):
@@ -239,7 +241,7 @@ class DynamicAgent:
         logging.debug(f"Code to execute: {code}")
         executable_code = self.extract_executable_code(code)
         logging.debug(f"Executable code: {executable_code}")
-        
+
         if not executable_code:
             return "Error: Code extraction failed.", None, None
     
@@ -258,54 +260,61 @@ class DynamicAgent:
         # Create other files
         self.create_files_from_string(other_files, ".")
     
-        try:
-            subprocess.run(['python', script_filename], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            with open(script_filename, 'r') as file:
-                output = file.read()
-            return output.strip(), None, script_filename
+        try: 
+            output = subprocess.run(['python', script_filename], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return output.stdout.decode('utf-8').strip(), None, script_filename
         except subprocess.CalledProcessError as e:
+            print("----------------ERROR----------------")
             error_message = e.stderr.decode('utf-8').strip() if e.stderr else str(e)
             with open(script_filename, 'r') as file:
                 executable_code = file.read()
             return f"Error during execution: {error_message}", executable_code, script_filename
     
     def fix_and_execute_code(self, error, code):
-        for _ in range(5):
-            logging.info("Attempting to fix the code...")
-            fix_instruction = self.predict(f"fix this error: '{error}' in the following code: ```{code}``` and Provide the correct complete code")
-            try:
-               dependencies = self.detect_dependencies(fix_instruction)
-               self.ensure_dependencies_installed(dependencies)
-            except:
-                logging.info("Meh i couldn't handle deps.")
-            fixed_code = self.extract_executable_code(fix_instruction)
+        # for _ in range(5):
 
-            if not fixed_code:
-                continue
-            
-            try:
-             script_filename = self.generate_unique_filename()
-             with open(script_filename, 'w') as f:
-                  f.write(fixed_code)
-            except:
-                logging.info("Meh i couldn't handle save")
-            
-            other_files = self.generate_other_files(fixed_code)
-            result, failed_code, script_filename = self.execute_code(fixed_code, other_files)
-            print("Result--->",result)
-            
-            if failed_code:
-                result = self.fix_and_execute_code(result, failed_code)
-            # self.prompt_delete_files(script_filename)
+        logging.info("Attempting to fix the code...")
+        logging.debug(f"Error: {error}\n")
+        logging.debug(f"Failed Code: {code}\n")
+        fix_instruction = self.predict(f"fix this error: '{error}' in the following code: ```{code}``` and Provide the correct complete code")
+        if self.execution_count > 2:
+            print("-----------------Trying Different Approach-----------------")
+            fix_instruction = self.predict(f"the following code ```{code}``` generated an error: '{error}', can you try different approach to solve the query?{self.query}")
+            logging.debug(f"Trying different approach to solve the error: {fix_instruction}")
+        try:
+            dependencies = self.detect_dependencies(fix_instruction)
+            self.ensure_dependencies_installed(dependencies)
+        except:
+            logging.info("Meh i couldn't handle deps.")
+        fixed_code = self.extract_executable_code(fix_instruction)
 
-            # try:
-            #     output = subprocess.check_output(['python', script_filename])
-            #     return output.decode('utf-8').strip()
-            # except subprocess.CalledProcessError as e:
-            #     error = e.output.decode('utf-8').strip()
-            #     with open(os.path.join("temp", "final_attempted_code.py"), 'w') as f:
-            #         f.write(fixed_code)
-            return f"Error during re-execution after fixing: {error}"
+        # if not fixed_code:
+        #     continue
+        
+        try:
+            script_filename = self.generate_unique_filename()
+            with open(script_filename, 'w') as f:
+                f.write(fixed_code)
+        except:
+            logging.info("Meh i couldn't handle save")
+        
+        other_files = self.generate_other_files(fixed_code)
+        result, failed_code, script_filename = self.execute_code(fixed_code, other_files)
+        print("Result--->", result)
+        if failed_code:
+            print("---------------Retrying----------------")
+            result = self.fix_and_execute_code(result, failed_code)
+        return result
+        # self.prompt_delete_files(script_filename)
+
+        # try:
+        #     output = subprocess.check_output(['python', script_filename])
+        #     return output.decode('utf-8').strip()
+        # except subprocess.CalledProcessError as e:
+        #     error = e.output.decode('utf-8').strip()
+        #     with open(os.path.join("temp", "final_attempted_code.py"), 'w') as f:
+        #         f.write(fixed_code)
+        # return f"Error during re-execution after fixing: {error}"
         
     def prompt_delete_files(self, folder_path):
        response = input("Would you like to delete the created files? (y/N): ")
@@ -317,6 +326,7 @@ class DynamicAgent:
            print("Files kept.")
         
     def process_query(self, query):
+        self.query = query
         logging.info("Processing the user query...")
         code_to_run = self.fetch_and_validate_solution(query)
         other_files = self.generate_other_files(code_to_run)
@@ -325,9 +335,11 @@ class DynamicAgent:
         if "failed" in dependencies_status.lower():
             print(dependencies_status)
         result, failed_code, script_filename = self.execute_code(code_to_run, other_files)
-        print("Result--->",result)
+
+        print("Result--->", result)
         
         if failed_code:
+            print("---------------Retrying----------------")
             result = self.fix_and_execute_code(result, failed_code)
         self.prompt_delete_files(script_filename)
         
