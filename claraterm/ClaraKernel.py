@@ -27,6 +27,7 @@ load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
 script_filename = ""
+MODEL_TYPE = "llama3"
 
 class FolderNameGenerator:
     def __init__(self):
@@ -76,7 +77,7 @@ class OtherFilesGenerator:
             # return self.llm.predict(prompt)
             logging.info("Predicting using Ollama...")
 
-            response = ollama.generate(model='llama3', 
+            response = ollama.generate(model=MODEL_TYPE, 
             prompt=prompt,
             )
             return response['response']
@@ -108,7 +109,7 @@ class DynamicAgent:
         else:
             # return self.llm.predict(prompt)
             logging.info("Predicting using Ollama...")
-            response = ollama.generate(model='llama3', 
+            response = ollama.generate(model=MODEL_TYPE, 
             prompt=prompt,
             )
             return response['response']
@@ -161,8 +162,8 @@ class DynamicAgent:
     
         # Get system username
         username = getpass.getuser()
-        return self.predict(f"""Note: You are an interactive terminal who does the job. The current OS is {os_name} {os_version}, and the system username is {username}.
- , So tell me How can I achieve this in Python {query} and give code only in this format with codeblock ```<code>``` (function used to extract the code re.search(r'```(?:Python|python)?\n(.*?)```', full_code, re.DOTALL)) open and close should be there at any cost but only once, you must provide me only one complete code block and nothing else and please don't provide any other information except the code.""")
+        return self.predict(f"""Note: You are an interactive terminal who does the job using Python code. The current OS is {os_name} {os_version}, and the system username is {username}.
+ , So tell me How can I achieve this in Python {query} and give code only inside it in this format with codeblock -> ```    ``` (function used to extract the code re.search(r'```(?:Python|python)?\n(.*?)```', full_code, re.DOTALL)) open and close should be there at any cost but only once, you must provide me only one complete code block and nothing else and please don't provide any other information except the code.""")
 
     def extract_executable_code(self, full_code):
         logging.info("Extracting code segment...")
@@ -218,6 +219,7 @@ class DynamicAgent:
         detected_imports_response = self.predict(f"Check the import statements in the given code and give all necessary pip installables if no package needed or if its inbuild then skip else provide as copy-paste snippet? {code}")
         dependencies = re.findall(r'pip install ([\w\-]+)', detected_imports_response)
         logging.debug(f"Detected dependencies: {dependencies}")
+        print(dependencies)
         return dependencies
 
     def ensure_dependencies_installed(self, dependencies):
@@ -257,35 +259,52 @@ class DynamicAgent:
         self.create_files_from_string(other_files, ".")
     
         try:
-            output = subprocess.check_output(['python', script_filename])
-            return output.decode('utf-8').strip(), None, script_filename
+            subprocess.run(['python', script_filename], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            with open(script_filename, 'r') as file:
+                output = file.read()
+            return output.strip(), None, script_filename
         except subprocess.CalledProcessError as e:
-            error_message = e.output.decode('utf-8').strip()
+            error_message = e.stderr.decode('utf-8').strip() if e.stderr else str(e)
+            with open(script_filename, 'r') as file:
+                executable_code = file.read()
             return f"Error during execution: {error_message}", executable_code, script_filename
     
     def fix_and_execute_code(self, error, code):
         for _ in range(5):
             logging.info("Attempting to fix the code...")
             fix_instruction = self.predict(f"fix this error: '{error}' in the following code: ```{code}``` and Provide the correct complete code")
-            dependencies = self.detect_dependencies(fix_instruction)
-            self.ensure_dependencies_installed(dependencies)
+            try:
+               dependencies = self.detect_dependencies(fix_instruction)
+               self.ensure_dependencies_installed(dependencies)
+            except:
+                logging.info("Meh i couldn't handle deps.")
             fixed_code = self.extract_executable_code(fix_instruction)
 
             if not fixed_code:
                 continue
             
-            script_filename = self.generate_unique_filename("temp")
-
-            with open(script_filename, 'w') as f:
-                f.write(fixed_code)
-
             try:
-                output = subprocess.check_output(['python', script_filename])
-                return output.decode('utf-8').strip()
-            except subprocess.CalledProcessError as e:
-                error = e.output.decode('utf-8').strip()
-                with open(os.path.join("temp", "final_attempted_code.py"), 'w') as f:
-                    f.write(fixed_code)
+             script_filename = self.generate_unique_filename()
+             with open(script_filename, 'w') as f:
+                  f.write(fixed_code)
+            except:
+                logging.info("Meh i couldn't handle save")
+            
+            other_files = self.generate_other_files(fixed_code)
+            result, failed_code, script_filename = self.execute_code(fixed_code, other_files)
+            print("Result--->",result)
+            
+            if failed_code:
+                result = self.fix_and_execute_code(result, failed_code)
+            # self.prompt_delete_files(script_filename)
+
+            # try:
+            #     output = subprocess.check_output(['python', script_filename])
+            #     return output.decode('utf-8').strip()
+            # except subprocess.CalledProcessError as e:
+            #     error = e.output.decode('utf-8').strip()
+            #     with open(os.path.join("temp", "final_attempted_code.py"), 'w') as f:
+            #         f.write(fixed_code)
             return f"Error during re-execution after fixing: {error}"
         
     def prompt_delete_files(self, folder_path):
@@ -304,8 +323,9 @@ class DynamicAgent:
         detected_dependencies = self.detect_dependencies(code_to_run)
         dependencies_status = self.ensure_dependencies_installed(detected_dependencies)
         if "failed" in dependencies_status.lower():
-            return dependencies_status
+            print(dependencies_status)
         result, failed_code, script_filename = self.execute_code(code_to_run, other_files)
+        print("Result--->",result)
         
         if failed_code:
             result = self.fix_and_execute_code(result, failed_code)
