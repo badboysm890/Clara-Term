@@ -4,7 +4,6 @@ import time
 import logging
 from langchain.chat_models import ChatOpenAI
 import os
-import logging
 import time
 from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
@@ -12,6 +11,8 @@ from langchain.chains import LLMChain
 from dotenv import load_dotenv
 import g4f
 import ollama
+import platform
+import getpass
 
 g4f.debug.logging = True  # Enable debug logging
 g4f.debug.check_version = False  # Disable automatic version checking
@@ -75,7 +76,7 @@ class OtherFilesGenerator:
             # return self.llm.predict(prompt)
             logging.info("Predicting using Ollama...")
 
-            response = ollama.generate(model='llama3:latest', 
+            response = ollama.generate(model='llama3', 
             prompt=prompt,
             )
             return response['response']
@@ -107,7 +108,7 @@ class DynamicAgent:
         else:
             # return self.llm.predict(prompt)
             logging.info("Predicting using Ollama...")
-            response = ollama.generate(model='llama3:latest', 
+            response = ollama.generate(model='llama3', 
             prompt=prompt,
             )
             return response['response']
@@ -155,10 +156,13 @@ class DynamicAgent:
         logging.info("Determining task from the provided query...")
         # Replace self.llm.predict with self.predict
         logging.debug(f"Query: {query}")
-        return self.predict(f"""So tell me How can I achieve this in Python {query} and give code only in this format:
-                        ```Python
-                        code should be here 
-                        ```, you must provide me only one complete code block and nothing else and please don't provide any other information except the code.""")
+        os_name = platform.system()
+        os_version = platform.release()
+    
+        # Get system username
+        username = getpass.getuser()
+        return self.predict(f"""Note: You are an interactive terminal who does the job. The current OS is {os_name} {os_version}, and the system username is {username}.
+ , So tell me How can I achieve this in Python {query} and give code only in this format with codeblock ```<code>``` (function used to extract the code re.search(r'```(?:Python|python)?\n(.*?)```', full_code, re.DOTALL)) open and close should be there at any cost but only once, you must provide me only one complete code block and nothing else and please don't provide any other information except the code.""")
 
     def extract_executable_code(self, full_code):
         logging.info("Extracting code segment...")
@@ -185,7 +189,14 @@ class DynamicAgent:
             return extracted_code.group(1).strip()
         else:
             logging.error("Failed to extract code.")
-        return ""
+            code = self.predict(full_code+" in the above code or text just extract the code alone in this format ```<code>```")
+            print(code)
+            extracted_code = re.search(r'```(?:Python|python)?\n(.*?)```', code, re.DOTALL)
+            if extracted_code:
+                logging.debug(f"Extracted code: {extracted_code.group(1).strip()}")
+                return extracted_code.group(1).strip()
+        
+        return "print('Code Extraction failed follow this format ```<code>```')"
 
     def validate_extracted_code(self, code):
         logging.info("Validating the extracted code...")
@@ -217,7 +228,6 @@ class DynamicAgent:
                 subprocess.check_output(['pip', 'install', package])
             except subprocess.CalledProcessError as e:
                 logging.error(f"Failed to install {package}")
-                # print original error message
                 logging.error(e)
                 return f"Failed to install {package}"
         return "Dependencies installed successfully."
@@ -263,9 +273,7 @@ class DynamicAgent:
 
             if not fixed_code:
                 continue
-
-            # folder_name = self.generate_unique_foldername()
-            # os.makedirs(folder_name, exist_ok=True)  # ensure the folder exists
+            
             script_filename = self.generate_unique_filename("temp")
 
             with open(script_filename, 'w') as f:
