@@ -11,6 +11,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
 import g4f
+import ollama
 
 g4f.debug.logging = True  # Enable debug logging
 g4f.debug.check_version = False  # Disable automatic version checking
@@ -66,12 +67,18 @@ class OtherFilesGenerator:
             response = g4f.ChatCompletion.create(
                 model=g4f.models.gpt_4,
                 messages=[{"role": "user", "content": prompt}],
-                provider=g4f.Provider.Liaobots,
+                provider=g4f.Provider.Bing,
             )
             # Directly return the response string
             return response
         else:
-            return self.llm.predict(prompt)
+            # return self.llm.predict(prompt)
+            logging.info("Predicting using Ollama...")
+
+            response = ollama.generate(model='llama3:latest', 
+            prompt=prompt,
+            )
+            return response['response']
         
     def generate_other_files(self, code):
         logging.info("Checking if other files are required... for running the code")
@@ -93,13 +100,17 @@ class DynamicAgent:
             response = g4f.ChatCompletion.create(
                 model=g4f.models.gpt_4,
                 messages=[{"role": "user", "content": prompt}],
-                provider=g4f.Provider.Liaobots,
+                provider=g4f.Provider.Bing,
             )
             # Directly return the response string
             return response
         else:
-            return self.llm.predict(prompt)
-
+            # return self.llm.predict(prompt)
+            logging.info("Predicting using Ollama...")
+            response = ollama.generate(model='llama3:latest', 
+            prompt=prompt,
+            )
+            return response['response']
 
     def generate_unique_foldername(self, query):
        logging.info("Generating unique folder name...")
@@ -143,16 +154,37 @@ class DynamicAgent:
     def determine_task(self, query):
         logging.info("Determining task from the provided query...")
         # Replace self.llm.predict with self.predict
-        return self.predict(f"So tell me How can I achieve this in Python {query}, Provide me only one complete code nothing else with if you need output to you?")
-
+        logging.debug(f"Query: {query}")
+        return self.predict(f"""So tell me How can I achieve this in Python {query} and give code only in this format:
+                        ```Python
+                        code should be here 
+                        ```, you must provide me only one complete code block and nothing else and please don't provide any other information except the code.""")
 
     def extract_executable_code(self, full_code):
         logging.info("Extracting code segment...")
-        extracted_code = re.search(r'```python(.*?)```', full_code, re.DOTALL)
+        # code format
+        '''
+        ```Python
+        import psutil
+        import time
+
+        while True:
+            battery = psutil.sensors_battery()
+            print(f"Current Battery Level: {battery.percent}%", end='\r')
+            if not battery.power_plugged:
+                print("Not Plugged In")
+            else:
+                print("Plugged In")
+            time.sleep(1)
+        ```
+        '''
+        extracted_code = re.search(r'```(?:Python|python)?\n(.*?)```', full_code, re.DOTALL)
         
         if extracted_code:
             logging.debug(f"Extracted code: {extracted_code.group(1).strip()}")
             return extracted_code.group(1).strip()
+        else:
+            logging.error("Failed to extract code.")
         return ""
 
     def validate_extracted_code(self, code):
@@ -171,7 +203,8 @@ class DynamicAgent:
 
     def detect_dependencies(self, code):
         logging.info("Detecting dependencies required for the generated code...")
-        detected_imports_response = self.predict(f"What are the pip installables for this code, provide as copy-paste snippet? {code}")
+        logging.debug(f"---------Code to detect dependencies: {code}")
+        detected_imports_response = self.predict(f"Check the import statements in the given code and give all necessary pip installables if no package needed or if its inbuild then skip else provide as copy-paste snippet? {code}")
         dependencies = re.findall(r'pip install ([\w\-]+)', detected_imports_response)
         logging.debug(f"Detected dependencies: {dependencies}")
         return dependencies
@@ -182,13 +215,16 @@ class DynamicAgent:
             try:
                 logging.debug(f"Installing {package}...")
                 subprocess.check_output(['pip', 'install', package])
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as e:
                 logging.error(f"Failed to install {package}")
+                # print original error message
+                logging.error(e)
                 return f"Failed to install {package}"
         return "Dependencies installed successfully."
 
     def execute_code(self, code, other_files):
         logging.info("Executing the generated code...")
+        logging.debug(f"Code to execute: {code}")
         executable_code = self.extract_executable_code(code)
         logging.debug(f"Executable code: {executable_code}")
         
@@ -217,7 +253,6 @@ class DynamicAgent:
             error_message = e.output.decode('utf-8').strip()
             return f"Error during execution: {error_message}", executable_code, script_filename
     
-
     def fix_and_execute_code(self, error, code):
         for _ in range(5):
             logging.info("Attempting to fix the code...")

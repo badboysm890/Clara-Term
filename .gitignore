@@ -174,3 +174,4 @@ clara.egg-info
 
 # Macos
 .DS_Store
+claraenv/
